@@ -14,7 +14,6 @@ class Diffusion:
             NOTE: 
                 * DDPM: Traditional DDPM (https://arxiv.org/pdf/2006.11239.pdf)
                 * DDPM-cFg: DDPM with classifier FREE guidance (https://arxiv.org/pdf/2207.12598.pdf)
-        
         """
 
         self.T = T

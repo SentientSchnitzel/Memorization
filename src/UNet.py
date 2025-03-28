@@ -111,23 +111,23 @@ class UNet(nn.Module):
         self.time_dim = time_dim
         self.inc = DoubleConv(c_in, channels)
         self.down1 = Down(channels, channels*2,  emb_dim=time_dim)
-        self.sa1 = SelfAttention(channels*2, img_size//2)
+        # self.sa1 = SelfAttention(channels*2, img_size//2)
         self.down2 = Down(channels*2, channels*4, emb_dim=time_dim)
         
-        self.sa2 = SelfAttention(channels*4, img_size // 4)
+        # self.sa2 = SelfAttention(channels*4, img_size // 4)
         self.down3 = Down(channels*4, channels*4,  emb_dim=time_dim)
-        self.sa3 = SelfAttention(channels*4, img_size // 8)
+        # self.sa3 = SelfAttention(channels*4, img_size // 8)
 
         self.bot1 = DoubleConv(channels*4, channels*8)
         self.bot2 = DoubleConv(channels*8, channels*8)
         self.bot3 = DoubleConv(channels*8, channels*4)
 
         self.up1 = Up(channels*8, channels*2,  emb_dim=time_dim)
-        self.sa4 = SelfAttention(channels*2, img_size // 4)
+        # self.sa4 = SelfAttention(channels*2, img_size // 4)
         self.up2 = Up(channels*4, channels,  emb_dim=time_dim)
-        self.sa5 = SelfAttention(channels, img_size // 2)
+        # self.sa5 = SelfAttention(channels, img_size // 2)
         self.up3 = Up(channels*2, channels,  emb_dim=time_dim)
-        self.sa6 = SelfAttention(channels, img_size)
+        # self.sa6 = SelfAttention(channels, img_size)
         self.outc = nn.Conv2d(channels, c_out, kernel_size=1)
 
         if num_classes is not None:
@@ -186,13 +186,13 @@ class Classifier(nn.Module):
         self.inc = DoubleConv(c_in, channels)
         
         self.down1 = Down(channels, channels*2, emb_dim=time_dim)
-        self.sa1   = SelfAttention(channels*2, img_size // 2)
+        # self.sa1   = SelfAttention(channels*2, img_size // 2)
 
         self.down2 = Down(channels*2, channels*4, emb_dim=time_dim)
-        self.sa2   = SelfAttention(channels*4, img_size // 4)
+        # self.sa2   = SelfAttention(channels*4, img_size // 4)
 
         self.down3 = Down(channels*4, channels*4, emb_dim=time_dim)
-        self.sa3   = SelfAttention(channels*4, img_size // 8)
+        # self.sa3   = SelfAttention(channels*4, img_size // 8)
 
         # Bottleneck layers (optional, but often helpful)
         self.bot1  = DoubleConv(channels*4, channels*8)
@@ -210,13 +210,13 @@ class Classifier(nn.Module):
         # --- Encoder forward pass ---
         x1 = self.inc(x) 
         x2 = self.down1(x1, t)
-        x2 = self.sa1(x2)
+        # x2 = self.sa1(x2)
 
         x3 = self.down2(x2, t)
-        x3 = self.sa2(x3)
+        # x3 = self.sa2(x3)
 
         x4 = self.down3(x3, t)
-        x4 = self.sa3(x4)
+        # x4 = self.sa3(x4)
 
         # Bottleneck
         x4 = self.bot1(x4)

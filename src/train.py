@@ -20,23 +20,22 @@ from utils import create_dirs
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
           time_dim=256, batch_size=4, lr=1e-3, num_epochs=5, device='cpu',
-          experiment_name="ddpm", train_frac=None):
+          experiment_name="ddpm", train_frac=None, cfg=False, num_classes=None):
 
     create_dirs(experiment_name)
     
-    num_classes = 14
-    diff_type = "DDPM"
+    num_classes = num_classes if cfg else None
 
     model = UNet(img_size=img_size, c_in=input_channels, c_out=input_channels, 
                  num_classes=num_classes, time_dim=time_dim,channels=channels, device=device).to(device)
     
+    diff_type = 'DDPM-cFg' if cfg else 'DDPM'
     diffusion = Diffusion(img_size=img_size, T=T, beta_start=1e-4, beta_end=0.02, diff_type=diff_type, device=device)
 
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     mse = torch.nn.MSELoss()
     
     data_root = "../s194323/data/"
-    
     train_dataset = CheXpertDataset(
         csv_file = f"{data_root}/train.csv",
         img_root_dir = f"{data_root}/train",
@@ -52,8 +51,17 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
         epoch_loss = 0
         for i, (images, labels) in enumerate(pbar):
             images = images.to(device)
-
-            labels = None
+            
+            if diff_type == 'DDPM-cFg':
+                # one-hot encode labels for classifier-free guidance
+                labels = labels.to(device)
+                labels = F.one_hot(labels, num_classes=num_classes).float()
+            else :
+                labels = None
+            
+            p_uncod = 0.1
+            if np.random.rand() < p_uncod:
+                labels = None
             
             t = torch.randint(0, T, (images.size(0),), device=device).long()
             x_t, noise = diffusion.q_sample(images, t)
@@ -73,7 +81,13 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
             torch.save(model.state_dict(), os.path.join("../s194323/experiments/", experiment_name, "weights" ,f"model.pth"))
             min_train_loss = epoch_loss    
         
-        y = None
+        if diffusion.diff_type == 'DDPM-cFg':
+            y = torch.tensor([np.random.randint(0,5)], device=device)
+            title = f'Epoch {epoch} with label:{CLASS_LABELS[y.item()]}'
+            y = F.one_hot(y, num_classes=num_classes).float()
+        else:
+            y = None
+            title = f'Epoch {epoch}'
         
         sampled_images = diffusion.p_sample_loop(model, batch_size=images.shape[0], y=y)
         
