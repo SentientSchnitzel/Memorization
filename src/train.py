@@ -18,8 +18,8 @@ from ddpm import Diffusion
 from data import CheXpertDataset
 from utils import create_dirs
 
-def train(T=500, img_size=112, input_channels=3, channels=4, 
-          time_dim=256, batch_size=2, lr=1e-3, num_epochs=5, device='cpu',
+def train(T=1000, img_size=224, input_channels=1, channels=16, 
+          time_dim=256, batch_size=4, lr=1e-3, num_epochs=5, device='cpu',
           experiment_name="ddpm", train_frac=None):
 
     create_dirs(experiment_name)
@@ -35,16 +35,11 @@ def train(T=500, img_size=112, input_channels=3, channels=4,
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     mse = torch.nn.MSELoss()
     
-    transform = transforms.Compose([
-        transforms.Resize((img_size, img_size)),
-        transforms.ToTensor()])
-
     data_root = "../s194323/data/"
     
     train_dataset = CheXpertDataset(
         csv_file = f"{data_root}/train.csv",
         img_root_dir = f"{data_root}/train",
-        transform = transform,
         frac=train_frac)
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -81,6 +76,7 @@ def train(T=500, img_size=112, input_channels=3, channels=4,
         y = None
         
         sampled_images = diffusion.p_sample_loop(model, batch_size=images.shape[0], y=y)
+        
         # save the first sampled image
         img_name = os.path.join("../s194323/experiments/", experiment_name, "samples", f"sampled_image_epoch_{epoch}.png")
         plt.imsave(img_name, sampled_images[0].squeeze().cpu().numpy().transpose(1, 2, 0))           
@@ -92,4 +88,4 @@ if __name__ == "__main__":
     num_epochs = 5
     train_frac = 0.25
 
-    train(device=device, num_epochs=num_epochs, train_frac=train_frac)
+    train(T = 1000, device=device, num_epochs=num_epochs, train_frac=train_frac, experiment_name="ddpm_2")

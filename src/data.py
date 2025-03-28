@@ -5,10 +5,9 @@ from PIL import Image
 from torchvision import transforms as T
 
 class CheXpertDataset(Dataset):
-    def __init__(self, csv_file, img_root_dir, transform=None, label_cols=None, frac=None):
+    def __init__(self, csv_file, img_root_dir, label_cols=None, frac=None):
         self.data = pd.read_csv(csv_file)
         self.img_root_dir = img_root_dir
-        self.transform = transform
         
         self.label_cols = label_cols or [
             # "Frontal/Lateral", 
@@ -97,5 +96,6 @@ if __name__ == "__main__":
         print("y (labels):", y)
         break  
 
-
+    # Min width: 320, Max width: 930
+    # Min height: 320, Max height: 642  
 

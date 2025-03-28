@@ -1,12 +1,11 @@
-import torch
-from tqdm import tqdm
 import logging
 import math
-
+import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
 class Diffusion:
-    def __init__(self, T=500, beta_start=1e-4, beta_end=0.02, diff_type='DDPM', img_size=16,device="cuda"):
+    def __init__(self, T=1000, beta_start=1e-4, beta_end=0.02, diff_type='DDPM', img_size=224, device="cuda"):
         """
         T : total diffusion steps (X_T is pure noise N(0,1))
         beta_start: value of beta for t=0
@@ -14,7 +13,6 @@ class Diffusion:
         diff_type: {DDPM, DPPM-cg, DDPM-cFg}    
             NOTE: 
                 * DDPM: Traditional DDPM (https://arxiv.org/pdf/2006.11239.pdf)
-                * DDPM-cg: DDPM with classifier guidance (https://arxiv.org/pdf/2105.05233.pdf)
                 * DDPM-cFg: DDPM with classifier FREE guidance (https://arxiv.org/pdf/2207.12598.pdf)
         
         """
@@ -30,16 +28,14 @@ class Diffusion:
         self.alphas_bar = torch.cumprod(self.alphas, dim=0) # cumulative products of alpha
         self.diff_type = diff_type
         self.classifier = None 
-        assert diff_type in {'DDPM', 'DDPM-cg', 'DDPM-cFg'}, 'Invalid diffusion type'
+        assert diff_type in {'DDPM', 'DDPM-cFg'}, 'Invalid diffusion type'
         print(f'Diffusion type: {diff_type}')
-
 
     def get_betas(self, schedule='linear'):
         if schedule == 'linear':
             return torch.linspace(self.beta_start, self.beta_end, self.T)
         else :
             raise NotImplementedError('Not implemented!')
-    
 
     def q_sample(self, x, t):
         """
@@ -59,7 +55,6 @@ class Diffusion:
         noise = torch.randn_like(x)
         return sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise, noise
     
-
     def classifier_conditioning(self, x_t, t, y, mean, std, classifier_scale=1):
 
         with torch.enable_grad():
@@ -72,7 +67,6 @@ class Diffusion:
 
         return new_mu
 
-
     def p_mean_std(self, model, x_t, t, y=None):
         """
         Calculate mean and std of p(x_{t-1} | x_t) using the reverse process and model
@@ -82,20 +76,15 @@ class Diffusion:
         alpha_bar = self.alphas_bar[t][:, None, None, None] # match image dimensions 
         beta = self.betas[t][:, None, None, None] # match image dimensions
 
-        
-        if y is None or self.diff_type == 'DDPM-cg':
+        if self.diff_type == 'DDPM':
             predicted_noise = model(x_t, t)  
         elif self.diff_type == 'DDPM-cFg':
             predicted_noise = model(x_t, t, y)        
 
         mean = 1 / torch.sqrt(alpha) * (x_t - ((1 - alpha) / (torch.sqrt(1 - alpha_bar))) * predicted_noise) 
         std = torch.sqrt(beta)
-
-        # Functionality for classifier guidance
-        if y is not None and self.diff_type=='DDPM-cg':
-            mean = self.classifier_conditioning(x_t, t, y, mean, std)      
+  
         return mean, std
-
 
     def p_sample(self, model, x_t, t, y=None):
         """
@@ -107,7 +96,6 @@ class Diffusion:
         else:
             noise = torch.zeros_like(x_t, device=self.device)
         return mean + std * noise
-
 
     def p_sample_loop(self, model, batch_size, timesteps_to_save=None, y=None, verbose=True):
         """
@@ -126,7 +114,6 @@ class Diffusion:
             x = torch.randn((batch_size, 3, self.img_size, self.img_size)).to(self.device)
             for i in pbar:
                 t = (torch.ones(batch_size) * i).long().to(self.device)
-                # T-1, T-2, .... 0
                 x = self.p_sample(model, x, t, y)
                 if timesteps_to_save is not None and i in timesteps_to_save:
                     x_itermediate = (x.clamp(-1, 1) + 1) / 2
@@ -142,7 +129,6 @@ class Diffusion:
             return x, intermediates
         else :
             return x
-    
 
     def sample_timesteps(self, batch_size, upper_limit=None):
         """
