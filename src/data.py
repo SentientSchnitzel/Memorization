@@ -6,7 +6,7 @@ import torch
 from torchvision import transforms
 
 class CheXpertDataset(Dataset):
-    def __init__(self, csv_file, img_root_dir, transform=None, label_cols=None):
+    def __init__(self, csv_file, img_root_dir, transform=None, label_cols=None, frac=None):
         self.data = pd.read_csv(csv_file)
         self.img_root_dir = img_root_dir
         self.transform = transform
@@ -19,6 +19,9 @@ class CheXpertDataset(Dataset):
             "Pleural Other", "Fracture", "Support Devices"]
         
         self.data = self.data.dropna(subset=["Path"])  # Drop rows with no path
+
+        if frac is not None:
+            self.data = self.data.sample(frac=frac)
 
     def __len__(self):
         return len(self.data)
@@ -52,7 +55,8 @@ if __name__ == "__main__":
     train_dataset = CheXpertDataset(
         csv_file = f"{data_root}/train.csv",
         img_root_dir = f"{data_root}/train",
-        transform = transform)
+        transform = transform,
+        frac=None)
     
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     print('Number of samples in train dataset:', len(train_dataset))
@@ -65,11 +69,11 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     print('Number of samples in validation dataset:', len(val_dataset))
     
-    # for x, y in train_loader:
-    #     print("x (images) shape:", x.shape)  # Should be [batch_size, 3, 224, 224]
-    #     print("y (labels) shape:", y.shape)  # Should be [batch_size, num_labels]
-    #     print("y (labels):", y)
-    #     break  
+    for x, y in train_loader:
+        print("x (images) shape:", x.shape)  # Should be [batch_size, 3, 224, 224]
+        print("y (labels) shape:", y.shape)  # Should be [batch_size, num_labels]
+        print("y (labels):", y)
+        break  
 
 
 
