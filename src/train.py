@@ -21,7 +21,7 @@ from utils import CLASS_LABELS
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
           time_dim=256, batch_size=16, lr=1e-3, num_epochs=5, device='cpu',
-          experiment_name="ddpm", train_frac=None, cfg=False, num_classes=None):
+          experiment_name="ddpm", train_frac=None, cfg=False, num_classes=14):
 
     create_dirs(experiment_name)
     
@@ -56,7 +56,8 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
             if diff_type == 'DDPM-cFg':
                 # one-hot encode labels for classifier-free guidance
                 labels = labels.to(device)
-                labels = F.one_hot(labels, num_classes=num_classes).float()
+                # print(labels)
+                # labels = F.one_hot(labels, num_classes=num_classes).float()
             else :
                 labels = None
             
@@ -103,4 +104,7 @@ if __name__ == "__main__":
     num_epochs = 5
     train_frac = 0.25
 
-    train(T = 1000, device=device, num_epochs=num_epochs, train_frac=train_frac, experiment_name="ddpm_2")
+    # train(T = 1000, device=device, num_epochs=num_epochs, train_frac=train_frac, experiment_name="ddpm_2")
+    train(T = 1000, device=device, 
+          num_epochs=num_epochs, train_frac=train_frac, 
+          experiment_name="ddpm_cfg", cfg=True)

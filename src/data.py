@@ -3,6 +3,7 @@ import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms as T
+import torch
 
 class CheXpertDataset(Dataset):
     def __init__(self, csv_file, img_root_dir, label_cols=None, frac=None):
@@ -64,8 +65,21 @@ class CheXpertDataset(Dataset):
         # Process labels: convert NaN to 0 and -1 to 0
         labels = row[self.label_cols].apply(pd.to_numeric, errors="coerce")
         labels = labels.fillna(0).replace(-1, 0).values.astype("float32")
-        
-        return image, labels
+        labels = torch.tensor(labels)
+
+        # Create a new tensor filled with zeros (same shape as labels)
+        labels_single = torch.zeros_like(labels)
+
+        # Find the indices of the positive classes (where label == 1)
+        positive_indices = (labels == 1).nonzero(as_tuple=True)[0]
+
+        # Randomly choose one positive class (if any exist)
+        if positive_indices.numel() > 0:  # Check if there are any positive classes
+            chosen_idx = positive_indices[torch.randint(0, positive_indices.size(0), (1,))]  # Randomly select one
+            labels_single[chosen_idx] = 1  # Set the chosen class to 1
+
+
+        return image, labels_single
 
 
 if __name__ == "__main__":
