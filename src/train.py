@@ -17,6 +17,7 @@ from UNet import UNet
 from ddpm import Diffusion
 from data import CheXpertDataset
 from utils import create_dirs
+from utils import CLASS_LABELS
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
           time_dim=256, batch_size=4, lr=1e-3, num_epochs=5, device='cpu',
