@@ -19,7 +19,7 @@ from data import CheXpertDataset
 from utils import create_dirs
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
-          time_dim=256, batch_size=4, lr=1e-3, num_epochs=5, device='cpu',
+          time_dim=256, batch_size=16, lr=1e-3, num_epochs=5, device='cpu',
           experiment_name="ddpm", train_frac=None, cfg=False, num_classes=None):
 
     create_dirs(experiment_name)
