@@ -1,14 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import math
 import argparse
 
 import torch
 import torch.nn.functional as F
 
-import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 from tqdm import tqdm
 from torch import optim
@@ -17,8 +16,7 @@ import logging
 from UNet import UNet
 from ddpm import Diffusion
 from data import CheXpertDataset
-from utils import create_dirs
-from utils import CLASS_LABELS
+from utils import create_dirs, CLASS_LABELS
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
           time_dim=256, batch_size=16, lr=1e-3, num_epochs=5, device='cpu',
@@ -32,7 +30,7 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
                  num_classes=num_classes, time_dim=time_dim,channels=channels, device=device).to(device)
     
     diff_type = 'DDPM-cFg' if cfg else 'DDPM'
-    diffusion = Diffusion(img_size=img_size, T=T, beta_start=1e-4, beta_end=0.02, diff_type=diff_type, device=device)
+    diffusion = Diffusion(img_size=img_size, channels=input_channels, T=T, beta_start=1e-4, beta_end=0.02, diff_type=diff_type, device=device)
 
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     mse = torch.nn.MSELoss()
@@ -86,17 +84,46 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
         
         if diffusion.diff_type == 'DDPM-cFg':
             y = torch.tensor([np.random.randint(0,5)], device=device)
-            title = f'Epoch {epoch} with label:{CLASS_LABELS[y.item()]}'
             y = F.one_hot(y, num_classes=num_classes).float()
         else:
             y = None
-            title = f'Epoch {epoch}'
         
+        # Generate images
         sampled_images = diffusion.p_sample_loop(model, batch_size=images.shape[0], y=y)
-        
-        # save the first sampled image
-        img_name = os.path.join("../s194323/experiments/", experiment_name, "samples", f"sampled_image_epoch_{epoch}.png")
-        plt.imsave(img_name, sampled_images[0].squeeze().cpu().numpy().transpose(1, 2, 0))           
+
+        # Extract grayscale channel and move to CPU
+        sampled_images = sampled_images[:, 0].cpu().numpy()  # Convert to NumPy early
+
+        # Ensure values are in range [0,1]
+        sampled_images = np.clip(sampled_images, 0, 1)
+
+        # Normalize to [0,255] and convert to uint8
+        sampled_images = (sampled_images * 255).astype(np.uint8)
+
+        # Compute grid dimensions
+        nrow = int(math.sqrt(sampled_images.shape[0]))  # Number of rows
+        ncol = math.ceil(sampled_images.shape[0] / nrow)  # Number of columns
+
+        # Create a figure with subplots
+        fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 2, nrow * 2))  # Adjust figure size as needed
+
+        # Flatten axes array in case of single row
+        axes = np.array(axes).reshape(-1)
+
+        # Plot each image in its corresponding subplot
+        for i, ax in enumerate(axes):
+            if i < sampled_images.shape[0]:  
+                ax.imshow(sampled_images[i], cmap="gray")
+                ax.axis("off")  # Hide axes
+            else:
+                ax.set_visible(False)  # Hide empty subplots
+
+        # Save the figure
+        img_name = os.path.join("../s194323/experiments/", experiment_name, "samples", f"sampled_images_epoch_{epoch}.png")
+        plt.tight_layout()
+        plt.savefig(img_name, bbox_inches="tight")
+        plt.close()
+           
 
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
