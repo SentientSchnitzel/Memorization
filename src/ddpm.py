@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 class Diffusion:
-    def __init__(self, T=1000, beta_start=1e-4, beta_end=0.02, diff_type='DDPM', img_size=224, device="cuda"):
+    def __init__(self, T=1000, beta_start=1e-4, beta_end=0.02, diff_type='DDPM', img_size=224, channels=1, device="cuda"):
         """
         T : total diffusion steps (X_T is pure noise N(0,1))
         beta_start: value of beta for t=0
@@ -20,6 +20,7 @@ class Diffusion:
         self.beta_start = beta_start
         self.beta_end = beta_end
         self.img_size = img_size
+        self.channels = channels
         self.device = device
         
         self.betas = self.get_betas().to(device)
@@ -110,7 +111,7 @@ class Diffusion:
         if timesteps_to_save is not None:
             intermediates = []
         with torch.no_grad():
-            x = torch.randn((batch_size, 3, self.img_size, self.img_size)).to(self.device)
+            x = torch.randn((batch_size, self.channels, self.img_size, self.img_size)).to(self.device)
             for i in pbar:
                 t = (torch.ones(batch_size) * i).long().to(self.device)
                 x = self.p_sample(model, x, t, y)
