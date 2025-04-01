@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import argparse
 
 import torch
 import torch.nn.functional as F
@@ -36,7 +37,7 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     mse = torch.nn.MSELoss()
     
-    data_root = "../s194323/data/"
+    data_root = "../s194323/data"
     train_dataset = CheXpertDataset(
         csv_file = f"{data_root}/train.csv",
         img_root_dir = f"{data_root}/train",
@@ -100,11 +101,35 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Model will run on {device}")
+    
+    parser = argparse.ArgumentParser(description="Train a DDPM model on CheXpert")
+    parser.add_argument('--T', type=int, default=1000, help='Number of diffusion steps')
+    parser.add_argument('--img_size', type=int, default=224, help='Input image size')
+    parser.add_argument('--input_channels', type=int, default=1, help='Number of input channels')
+    parser.add_argument('--channels', type=int, default=16, help='Base channel size for U-Net')
+    parser.add_argument('--time_dim', type=int, default=256, help='Time embedding dimension')
+    parser.add_argument('--batch_size', type=int, default=16, help='Training batch size')
+    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('--num_epochs', type=int, default=5, help='Number of training epochs')
+    parser.add_argument('--experiment_name', type=str, default='ddpm', help='Name of experiment folder')
+    parser.add_argument('--train_frac', type=float, default=None, help='Fraction of training data to use')
+    parser.add_argument('--cfg', action='store_true', help='Use classifier-free guidance')
+    parser.add_argument('--num_classes', type=int, default=14, help='Number of classes (only relevant if using cfg)')
 
-    num_epochs = 5
-    train_frac = 0.25
+    args = parser.parse_args()
 
-    # train(T = 1000, device=device, num_epochs=num_epochs, train_frac=train_frac, experiment_name="ddpm_2")
-    train(T = 1000, device=device, 
-          num_epochs=num_epochs, train_frac=train_frac, 
-          experiment_name="ddpm_cfg", cfg=True)
+    train(
+        T=args.T,
+        img_size=args.img_size,
+        input_channels=args.input_channels,
+        channels=args.channels,
+        time_dim=args.time_dim,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        num_epochs=args.num_epochs,
+        device=device,
+        experiment_name=args.experiment_name,
+        train_frac=args.train_frac,
+        cfg=args.cfg,
+        num_classes=args.num_classes
+    )
