@@ -3,6 +3,7 @@ import numpy as np
 import os
 import math
 import argparse
+import yaml
 
 import torch
 import torch.nn.functional as F
@@ -16,13 +17,11 @@ import logging
 from UNet import UNet
 from ddpm import Diffusion
 from data import CheXpertDataset
-from utils import create_dirs, CLASS_LABELS
+from utils import create_dirs, CLASS_LABELS, load_config, save_config
 
 def train(T=1000, img_size=224, input_channels=1, channels=16, 
           time_dim=256, batch_size=16, lr=1e-3, num_epochs=5, device='cpu',
           experiment_name="ddpm", train_frac=None, cfg=False, num_classes=14):
-
-    create_dirs(experiment_name)
     
     num_classes = num_classes if cfg else None
 
@@ -130,33 +129,51 @@ if __name__ == "__main__":
     print(f"Model will run on {device}")
     
     parser = argparse.ArgumentParser(description="Train a DDPM model on CheXpert")
-    parser.add_argument('--T', type=int, default=1000, help='Number of diffusion steps')
-    parser.add_argument('--img_size', type=int, default=224, help='Input image size')
-    parser.add_argument('--input_channels', type=int, default=1, help='Number of input channels')
-    parser.add_argument('--channels', type=int, default=16, help='Base channel size for U-Net')
-    parser.add_argument('--time_dim', type=int, default=256, help='Time embedding dimension')
-    parser.add_argument('--batch_size', type=int, default=16, help='Training batch size')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('--num_epochs', type=int, default=5, help='Number of training epochs')
-    parser.add_argument('--experiment_name', type=str, default='ddpm', help='Name of experiment folder')
+    parser.add_argument('--config', type=str, default="config", help='Path to YAML config file')
+    parser.add_argument('--T', type=int, default=None, help='Number of diffusion steps')
+    parser.add_argument('--img_size', type=int, default=None, help='Input image size')
+    parser.add_argument('--input_channels', type=int, default=None, help='Number of input channels')
+    parser.add_argument('--channels', type=int, default=None, help='Base channel size for U-Net')
+    parser.add_argument('--time_dim', type=int, default=None, help='Time embedding dimension')
+    parser.add_argument('--batch_size', type=int, default=None, help='Training batch size')
+    parser.add_argument('--lr', type=float, default=None, help='Learning rate')
+    parser.add_argument('--num_epochs', type=int, default=None, help='Number of training epochs')
+    parser.add_argument('--experiment_name', type=str, default=None, help='Name of experiment folder')
     parser.add_argument('--train_frac', type=float, default=None, help='Fraction of training data to use')
     parser.add_argument('--cfg', action='store_true', help='Use classifier-free guidance')
-    parser.add_argument('--num_classes', type=int, default=14, help='Number of classes (only relevant if using cfg)')
+    parser.add_argument('--num_classes', type=int, default=None, help='Number of classes (only relevant if using cfg)')
 
     args = parser.parse_args()
 
+    # Load YAML config
+    config = load_config(args.config)
+
+    # Override YAML settings with command-line arguments if provided
+    for key, value in vars(args).items():
+        if key == 'config':
+            continue
+        if value is not None:  # Only override if a value is given
+            config[key] = value
+
+    # Create directories for saving results
+    create_dirs(config['experiment_name'])
+
+    # Save the updated config
+    save_dir = os.path.join("../s194323/experiments", config["experiment_name"], "weights")
+    save_config(config, save_dir)
+
     train(
-        T=args.T,
-        img_size=args.img_size,
-        input_channels=args.input_channels,
-        channels=args.channels,
-        time_dim=args.time_dim,
-        batch_size=args.batch_size,
-        lr=args.lr,
-        num_epochs=args.num_epochs,
+        T=config['T'],
+        img_size=config['img_size'],
+        input_channels=config['input_channels'],
+        channels=config['channels'],
+        time_dim=config['time_dim'],
+        batch_size=config['batch_size'],
+        lr=config['lr'],
+        num_epochs=config['num_epochs'],
         device=device,
-        experiment_name=args.experiment_name,
-        train_frac=args.train_frac,
-        cfg=args.cfg,
-        num_classes=args.num_classes
+        experiment_name=config['experiment_name'],
+        train_frac=config['train_frac'],
+        cfg=config['cfg'],
+        num_classes=config['num_classes']
     )
