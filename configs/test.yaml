@@ -1,0 +1,12 @@
+T: 1000
+batch_size: 16
+cfg: false
+channels: 16
+experiment_name: test_model
+img_size: 224
+input_channels: 1
+lr: 0.001
+num_classes: 14
+num_epochs: 5
+time_dim: 256
+train_frac: 0.001

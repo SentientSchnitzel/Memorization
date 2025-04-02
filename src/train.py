@@ -79,6 +79,10 @@ def train(T=1000, img_size=224, input_channels=1, channels=16,
         epoch_loss /= l
         if epoch_loss <= min_train_loss:
             torch.save(model.state_dict(), os.path.join("../s194323/experiments/", experiment_name, "weights" ,f"model.pth"))
+            
+             # Saves the whole model
+            torch.save(model, os.path.join("../s194323/experiments/", experiment_name, "weights" ,f"whole_model.pth"))
+
             min_train_loss = epoch_loss    
         
         if diffusion.diff_type == 'DDPM-cFg':
